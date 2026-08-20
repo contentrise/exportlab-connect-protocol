@@ -49,6 +49,27 @@ struct MessageCodingTests {
         #expect(decoded.files.first?.playability == .needsTranscode)
     }
 
+    @Test("carries the initiator nonce in the hello")
+    func helloCarriesNonce() throws {
+        // The responder needs the initiator's nonce before it can derive the
+        // pairing code it has to display. Moving it to a later frame would let
+        // the two sides build different transcripts and show different numbers.
+        let nonce = Data(repeating: 0x5A, count: 32)
+        let hello = HelloMessage(
+            role: .initiator,
+            deviceID: "phone-1",
+            deviceName: "iPhone",
+            platform: .iOS,
+            osVersion: "26.3",
+            appVersion: "1.0.0",
+            spkiSHA256: String(repeating: "a", count: 43),
+            capabilities: [],
+            nonce: nonce
+        )
+        let frame = try ELCPFrame.json(.hello, hello)
+        #expect(try frame.decode(HelloMessage.self, expecting: .hello).nonce == nonce)
+    }
+
     @Test("rejects a payload decoded as the wrong kind")
     func rejectsKindMismatch() throws {
         let frame = try ELCPFrame.json(.ping, CancelMessage())

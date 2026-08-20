@@ -57,6 +57,13 @@ public struct HelloMessage: Codable, Sendable {
     /// public key — the binding that makes a relayed handshake useless.
     public var spkiSHA256: String
     public var capabilities: PeerCapabilities
+    /// 32 random bytes contributed by the initiator.
+    ///
+    /// Carried in the hello rather than in a later frame so that both sides can
+    /// build the identical transcript: the responder needs it before it can
+    /// derive the pairing code, and a round trip to fetch it would let the two
+    /// sides disagree about ordering.
+    public var nonce: Data
 
     public init(
         version: UInt8 = ELCP.version,
@@ -67,7 +74,8 @@ public struct HelloMessage: Codable, Sendable {
         osVersion: String,
         appVersion: String,
         spkiSHA256: String,
-        capabilities: PeerCapabilities
+        capabilities: PeerCapabilities,
+        nonce: Data = Data()
     ) {
         self.version = version
         self.role = role
@@ -78,6 +86,7 @@ public struct HelloMessage: Codable, Sendable {
         self.appVersion = appVersion
         self.spkiSHA256 = spkiSHA256
         self.capabilities = capabilities
+        self.nonce = nonce
     }
 }
 

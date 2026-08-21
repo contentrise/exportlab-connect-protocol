@@ -132,9 +132,18 @@ public enum PKCS12 {
     /// Imports the blob and returns the identity it contains.
     public static func identity(from blob: Data, password: String) throws -> SecIdentity {
         var items: CFArray?
+        // Memory only. Without this SecPKCS12Import writes the private key into
+        // the login keychain, where it lands as another "Imported Private Key"
+        // on every launch — 942 of them accumulated during development — and
+        // macOS then raises an authorisation prompt every time one is used to
+        // sign. The identity is needed for the length of a TLS session and has
+        // no business outliving the process.
         let status = SecPKCS12Import(
             blob as CFData,
-            [kSecImportExportPassphrase as String: password] as CFDictionary,
+            [
+                kSecImportExportPassphrase as String: password,
+                kSecImportToMemoryOnly as String: true,
+            ] as CFDictionary,
             &items
         )
         guard status == errSecSuccess,

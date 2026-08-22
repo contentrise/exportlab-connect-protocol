@@ -138,14 +138,19 @@ public enum PKCS12 {
         // macOS then raises an authorisation prompt every time one is used to
         // sign. The identity is needed for the length of a TLS session and has
         // no business outliving the process.
-        let status = SecPKCS12Import(
-            blob as CFData,
-            [
-                kSecImportExportPassphrase as String: password,
-                kSecImportToMemoryOnly as String: true,
-            ] as CFDictionary,
-            &items
-        )
+        //
+        // The key is only available from macOS 15 / iOS 18, and this package
+        // still supports iOS 17. Where it is missing the import behaves as it
+        // always did — which is survivable there: the stray keys were a macOS
+        // problem, where the identity is rebuilt on every launch of a
+        // long-running app, and where a keychain item's ACL then makes macOS
+        // prompt for the login password on every signature.
+        var options: [String: Any] = [kSecImportExportPassphrase as String: password]
+        if #available(macOS 15.0, iOS 18.0, *) {
+            options[kSecImportToMemoryOnly as String] = true
+        }
+
+        let status = SecPKCS12Import(blob as CFData, options as CFDictionary, &items)
         guard status == errSecSuccess,
               let array = items as? [[String: Any]],
               let identity = array.first?[kSecImportItemIdentity as String]
